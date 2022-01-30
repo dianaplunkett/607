@@ -10,11 +10,16 @@ output: html_document
 The data set used here is from the article "The (Very) Long Tail of Hurricane Recovery".    
 https://projects.fivethirtyeight.com/sandy-311/    
 
-The article discussed how nearly 5 years after Sandy, 311 was still getting calls from New Yorkers asking for information.  
+The article discussed how nearly 5 years after Sandy, 311 was still getting calls from    
+New Yorkers asking for information.  
 
-The data is pulled from NYC Open Data, and is structured with a row for each day from Oct 29, 2012 though Sept 18, 2017.  The columns consist of a date, followed by a columns for each NYC Agency to which calls were referred. 
+The data is pulled from NYC Open Data, and is structured with a row for each day from Oct 29, 2012
+though Sept 18, 2017.  The columns consist of a date, followed by a columns for each NYC Agency to
+which calls were referred. 
 
-Although the stream chart in the article was beautiful, and perfect for illustrating the long tail, I had a hard time comparing which agencies got the most calls each year.  Below I restructure and chart the data to do that.  
+Although the stream chart in the article was beautiful, and perfect for illustrating the long tail,
+I had a hard time comparing which agencies got the most calls each year.  Below I restructure and
+chart the data to do that.  
 
 ### Bring in libraries and data
 
@@ -26,7 +31,8 @@ sandy_data <-read_csv("https://raw.githubusercontent.com/dianaplunkett/607/main/
 ```
 
 ### Pivot the data
-Pivot the data to get the NYC Agencies to be the data in a column, rather than the name of a column. 
+Pivot the data to get the NYC Agencies to be the data in a column, rather than the name of a
+column. 
 
 ```{r}
 sandy_data %<>% pivot_longer(!date, names_to = "agency", values_to = "calls_count")
@@ -66,7 +72,10 @@ annual_sandy_data %<>% mutate (percent_of_total = calls / year_calls)
 ```
 ### Keeping only the top 5 rows per year
 
-The function here gets the agencies with the top 5 largest 'percent of total's each year.  I am sure there is a clever way to call the function for each year and union the resulting data, and I tried to do that with a for loop, but my R skills are not yet to that level.  I left in a bit of what I attempted as a comment so when I learn more about for loops, I can figure it out. 
+The function here gets the agencies with the top 5 largest 'percent of total's each year.  I am
+sure there is a clever way to call the function for each year and union the resulting data, and I
+tried to do that with a for loop, but my R skills are not yet to that level.  I left in a bit of
+what I attempted as a comment so when I learn more about for loops, I can figure it out. 
 
 The code below works, it is just not very elegant.
 
@@ -104,7 +113,8 @@ all_top5 <- union(U12thru15, U16_17)
 
 ### Plot it
 
-Now that we have arranged the data, let's see what we can learn about which agencies were involved with the 311 calls each year (limiting it to only the top 5 agencies per year.    
+Now that we have arranged the data, let's see what we can learn about which agencies were involved
+with the 311 calls each year (limiting it to only the top 5 agencies per year.    
 
 ```{r}
 color_map<-tibble(type= c('12', '13', '14','15', '16', '17'), 
@@ -122,12 +132,16 @@ all_top5 %>% ggplot() +
 
 ### Conclusion    
 
-Pivoting the data to make the agency the focus, summarizing by year/agency and then calculating the % of a year's total for each agency let us see which agencies got the most calls each year.  
+Pivoting the data to make the agency the focus, summarizing by year/agency and then calculating
+the % of a year's total for each agency let us see which agencies got the most calls each year.  
 
 By limiting the data to the top 5 agencies each year, and then plotting this, one can see:   
-* NYS Emergency Management (NYSEMERGENCYMG) got almost 1/4 of the calls in the 'tail' years of 2015, 2016 and 2017    
-* The Dept of Finance (DOF), Dept of Buildings (DOB) and City Hall (CHall), along with NYS Emergency Management got calls in most years.    
+* NYS Emergency Management (NYSEMERGENCYMG) got almost 1/4 of the calls in the 'tail' 
+  years of 2015, 2016 and 2017    
+* The Dept of Finance (DOF), Dept of Buildings (DOB) and City Hall (CHall), along with NYS
+  Emergency Management got calls in most years.    
 
-*Note: I considered "translating" the Agency abbreviation, but given some the the long names, it would clutter the chart.  Therefore I decided to translate here in the conclusions.*  
+*Note: I considered "translating" the Agency abbreviation, but given some the the long names, it*
+*would clutter the chart.  Therefore I decided to translate here in the conclusions.*  
 
 
