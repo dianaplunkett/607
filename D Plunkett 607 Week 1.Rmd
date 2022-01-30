@@ -1,0 +1,133 @@
+---
+title: "D Plunkett 607 Week 1"
+author: "Diana Plunkett"
+date: "1/30/2022"
+output: html_document
+---
+<hr/>  
+## Overview
+
+The data set used here is from the article "The (Very) Long Tail of Hurricane Recovery".    
+https://projects.fivethirtyeight.com/sandy-311/    
+
+The article discussed how nearly 5 years after Sandy, 311 was still getting calls from New Yorkers asking for information.  
+
+The data is pulled from NYC Open Data, and is structured with a row for each day from Oct 29, 2012 though Sept 18, 2017.  The columns consist of a date, followed by a columns for each NYC Agency to which calls were referred. 
+
+Although the stream chart in the article was beautiful, and perfect for illustrating the long tail, I had a hard time comparing which agencies got the most calls each year.  Below I restructure and chart the data to do that.  
+
+### Bring in libraries and data
+
+```{r}
+library(tidyverse)
+library(magrittr)
+
+sandy_data <-read_csv("https://raw.githubusercontent.com/dianaplunkett/607/main/sandy-311-calls-by-day.csv", show_col_types = FALSE)
+```
+
+### Pivot the data
+Pivot the data to get the NYC Agencies to be the data in a column, rather than the name of a column. 
+
+```{r}
+sandy_data %<>% pivot_longer(!date, names_to = "agency", values_to = "calls_count")
+
+```
+
+### Summerize and tidy the data     
+* pull year from date so we can then ...    
+* summarize by year and agency    
+* filter "total" from agency, which was an original column, and is not an agency    
+* also filter any row with calls= 0 (eg row where an agency had no calls that year) 
+
+```{r}
+# year is in the last 2 characters of the data field
+sandy_data %<>% mutate(year = str_sub(sandy_data$date, -2,-1))
+
+annual_sandy_data <- sandy_data %>% 
+    group_by(year, agency) %>% 
+    summarize(calls = sum(calls_count, na.rm = TRUE))
+
+annual_sandy_data %<>% filter(agency !="total")
+annual_sandy_data %<>% filter(calls !=0 )
+```
+### Augment the data    
+* calculate the total per year    
+* and then get the % of total for each agency for each year    
+
+```{r}
+year_total =  annual_sandy_data %>% 
+    group_by(year) %>% 
+    summarize(year_calls = sum(calls, na.rm = TRUE))
+
+annual_sandy_data <- merge(x=annual_sandy_data, y=year_total, by='year')
+annual_sandy_data %<>% mutate (percent_of_total = calls / year_calls)
+
+
+```
+### Keeping only the top 5 rows per year
+
+The function here gets the agencies with the top 5 largest 'percent of total's each year.  I am sure there is a clever way to call the function for each year and union the resulting data, and I tried to do that with a for loop, but my R skills are not yet to that level.  I left in a bit of what I attempted as a comment so when I learn more about for loops, I can figure it out. 
+
+The code below works, it is just not very elegant.
+
+```{r}
+get_top5 <- function(x) {
+    top5 <-annual_sandy_data %>% 
+    filter(year == x) %>%
+    group_by(year)%>%
+    arrange(desc(percent_of_total)) %>%
+    head(5)
+    return(top5)
+}
+
+#tried to use a for loop to union the top 5 for each year, but could not quite get it
+# tried variations on the below
+#for (i in 12:17) {
+#   print(i)
+#    union (just_top5, get_top5(i))
+#}
+#so I "cheated" and just did it manually. Works for a data set of this size.
+#and since loops were not the focus of this work, assuming this is OK.
+
+just_top5_12 <- get_top5(12)
+just_top5_13 <- get_top5(13)
+just_top5_14 <- get_top5(14)
+just_top5_15 <- get_top5(15)
+just_top5_16 <- get_top5(16)
+just_top5_17 <- get_top5(17)
+U12_13 <-union(just_top5_13, just_top5_12)
+U14_15 <-union(just_top5_14, just_top5_15)
+U16_17 <-union(just_top5_16, just_top5_17)
+U12thru15<-union(U12_13, U14_15)
+all_top5 <- union(U12thru15, U16_17)
+```
+
+### Plot it
+
+Now that we have arranged the data, let's see what we can learn about which agencies were involved with the 311 calls each year (limiting it to only the top 5 agencies per year.    
+
+```{r}
+color_map<-tibble(type= c('12', '13', '14','15', '16', '17'), 
+                  color = c('#154360', '#2980b9', '#5aa8dc', 
+                            '#a9cce3', '#aed6f1',  '#ebf5fb' ))
+
+all_top5 %>% ggplot() +
+    geom_col(mapping = aes(x=agency, y=percent_of_total, fill=year)) + 
+    scale_fill_manual(values=color_map$color) +
+    coord_flip() +
+    ggtitle("Top 5 Agencies involved in 311 calls about Huricane Sandy by Year") + 
+    ylab('% total calls made in a year')+
+    xlab("Agency")
+```
+
+### Conclusion    
+
+Pivoting the data to make the agency the focus, summarizing by year/agency and then calculating the % of a year's total for each agency let us see which agencies got the most calls each year.  
+
+By limiting the data to the top 5 agencies each year, and then plotting this, one can see:   
+* NYS Emergency Management (NYSEMERGENCYMG) got almost 1/4 of the calls in the 'tail' years of 2015, 2016 and 2017    
+* The Dept of Finance (DOF), Dept of Buildings (DOB) and City Hall (CHall), along with NYS Emergency Management got calls in most years.    
+
+*Note: I considered "translating" the Agency abbreviation, but given some the the long names, it would clutter the chart.  Therefore I decided to translate here in the conclusions.*  
+
+
