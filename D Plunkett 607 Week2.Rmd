@@ -1,0 +1,87 @@
+title: "D Plunkett 607 Week 1"
+author: "Diana Plunkett"
+date: "1/30/2022"
+output: html_document
+---
+<hr/>  
+## Overview
+
+I have surveyed 8 people, asking them to rank 6 movies on a scale of 1-5 (1 = highest and 5 = lowest).
+
+The results are stored in a database called MovieReviews, which has two tables:    
+The table Movie has 3 fields:  MovieID, Title, YearReleased    
+The table Rating has fields: RatingID, ReviewerID, MovieID, Ranking    
+
+If this had been a survey where there was also some demographic data about the survey respondents, I would have also created a Respondent with the ReviewerID and the demographic info (age, zip code, etc).  But that was not needed here, so best to keep it simple.  
+
+As there were only 6 movies, and that data was static  - if I were to run the survey again, with different people, or the same people in 6 months the same data would apply - I simply loaded the movie data into the Movie table within the script.  This also simplified the replication.  
+
+For the 8 responses, these were saved from a spreadsheet to Movie Survey.csv, and loaded into the database from there.  
+
+Movie Survey.csv is availble on github to be downloaded and used in one's local environment, as is the MySQL script, MovieReviews.    
+IMPORTANT: The path for the script must be updated if the Movie Survey.csv is not in c:\data. 
+
+###Load Libraries 
+```{r}
+library(dbplyr)
+library(RMySQL)
+library(tidyverse)
+library(stringr)
+library(magrittr)
+```
+
+
+###Load Database
+
+IMPORTANT NOTE: User should be updated to your username.
+
+```{r}
+mydb <- dbConnect(MySQL(), 
+  host = "localhost",
+  dbname = "MovieReviews",
+  user = "newuser",  #REPLACE newuser WITH YOUR USERNAME
+  password = rstudioapi::askForPassword("Database password")
+)
+dbListTables(mydb)
+dbGetQuery(mydb, 'SELECT * FROM Movie')
+dbGetQuery(mydb, 'select ReviewerID, count(*) from Rating group by ReviewerID')
+```
+
+###Load Data to dataframe
+
+This includes a left join to add the name and year of the movie to the ratings.  
+
+```{r}
+mv <- dbReadTable(mydb, "Movie")
+rt <- dbReadTable(mydb, "Rating")
+
+reviews <- left_join(rt, mv, by = NULL)
+
+print(reviews)
+
+```
+
+###Seeing the results
+
+Also concatenating the Title and YearReleased as I can never remember the order of the Matrix movies, so this helps. 
+
+```{r}
+
+reviews$Title %<>% str_c(" (",  reviews$YearReleased,  ")")
+
+sumReviews <- reviews %>% 
+    group_by(Title) %>% 
+    summarize(avg_rt = mean(Ranking, na.rm = TRUE), 
+              votes = sum(!is.na(Ranking)))
+
+(sumReviews [order(sumReviews$avg_rt),])
+```
+### Conclusion  
+
+Ready Player One had the highest average rating.  But the Matrix was very very close, and it had 8 votes vs Ready Player One's 6.  
+
+The fewest people voted for (and presumable saw) the The Matrix, Resurections (2021) and those who saw it gave it the lowest ranking.    
+
+
+
+
