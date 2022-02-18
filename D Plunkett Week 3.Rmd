@@ -1,0 +1,131 @@
+---
+title: "D Plunkett 607 Week 3"
+author: "Diana Plunkett"
+date: "2/13/2022"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+## 1
+Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+
+```{r}
+majors <-read_csv("https://raw.githubusercontent.com/dianaplunkett/607/main/majors-list.csv",
+                  show_col_types = FALSE)
+```
+
+```{r}
+majors %>% 
+filter(str_detect(Major, "DATA|STATISTICS")) 
+
+```
+
+## 2.1
+Write code that transforms the data below:    
+    [1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"    
+    [5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"    
+    [9] "elderberry"   "lime"         "lychee"       "mulberry"       
+    [13] "olive"        "salal berry"    
+Into a format like this:    
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")   
+
+### After Wednesday's class, I think this is what is expected for this question:
+Take in a file with 4 lines of text that look like:    
+
+    [1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"    
+    [5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"    
+    [9] "elderberry"   "lime"         "lychee"       "mulberry"       
+    [13] "olive"        "salal berry"    
+    
+
+And create a string that looks like:     
+
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry") 
+
+```{r}
+
+inputTXT<-readLines("https://raw.githubusercontent.com/dianaplunkett/607/main/produce.txt", 
+                   n=-1,
+                   warn=FALSE)
+writeLines(inputTXT)
+
+produce<-c(str_extract_all(inputTXT, "(\"\\w*[:blank:]?\\w*\")+", simplify=TRUE))
+produce<-as.data.frame(produce)
+produce <- as.data.frame(produce[!apply(produce, 1, function(x) any(x=="")),])
+names(produce) [1]<-'NameList'
+produce <- produce[order(produce$NameList),]
+
+
+ProduceString <-paste0(produce, collapse=",", sep="" )
+FinalString <-paste0("c(", ProduceString, ")", sep="")
+writeLines(FinalString)
+
+```
+
+
+#### 2.2 The below is my earlier atempt at this, when I understood the question slightly differently.
+
+```{r}
+produce <-c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+produce
+
+
+```
+
+```{r}
+cat("c(", paste0(shQuote(produce, type="cmd"), collapse=", "), ")", sep="")
+
+```
+
+## 3
+
+Describe, in words, what these expressions will match:
+
+    (.)\1\1    
+The above will match any three characters in a row, like 'ddd'.  The dot . matches any character, it is grouped with parentheses (.), and the \1 is a backreference to the group, and the second \1 is another backreference to the same group.    
+    
+    "(.)(.)\\2\\1"    
+The above will match any two characters, followed by the reverse of those two characters, like 'dppd'.  We start with 2 dots (any 2 characters), each grouped (with parens), then the backreference to the 2nd group, then and a backreference to the first group.  
+
+    (..)\1    
+The above will match any two characters repeated: "dpdp".  A group of 2 characters, followed by a backreference.  
+    
+    "(.).\\1.\\1"
+The above will match a string of 5 characters where the first, third and fifth character are the same: "dxdyd". A grouped character, then a dot (any char), then a backreference to the first group, another dot (any char) and another reference to the group.    
+
+    "(.)(.)(.).*\\3\\2\\1"    
+The above will match three characters followed by a wildcard of 0 or more characters and then the first three characters again in reveres order.  So all of the following will match: "dmppmd", "dmp8pmd", dmpabcdefghpmd".  Three individually grouped characters, a wildcard character which can be of any length including 0, and then back references to the 3rd, 2nd and 1st groups (in that order).
+
+## 4
+Construct regular expressions to match words that:
+
+    Start and end with the same character.    
+    
+    "^(.)((.*\\1$)|\\1?$)" - ^ indicates starts with, (.) a group with any character, followed by a wildcard group    that ends ($) in the first character OR it is only one character.  The bit up to the | will find all words that    start and end with the same character that are more than one character long.  The part after the | (or) says    also include it if there are as few characters as the overall pattern to match (eg lazy, start ^ and end $ are (.)).    
+```{r}
+str_subset(words, "^(.)((.*\\1$)|\\1?$)")
+```
+
+    
+    Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)        
+    
+    "([A-Za-z][A-Za-z]).*\\1" - the first group in parens is a letter (upper of lower case) followed by another       letter (upper or lower case), then a wildcard of 0 or more characters, and then a backreference to the first       group of 2 letters.  
+
+```{r}
+str_subset(words, "([A-Za-z][A-Za-z]).*\\1")
+```
+
+    Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)    
+    
+    "([a-z]).*\\1.*\\1" - group containing a letter, followed by a wild card of 0 or more characters, then a         backreference to the group letter, another wild card and then the group letter again. 
+
+```{r}
+str_subset(words, "([a-z]).*\\1.*\\1")
+```
+
+
+
