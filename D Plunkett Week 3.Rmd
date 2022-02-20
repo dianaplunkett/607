@@ -86,13 +86,18 @@ cat("c(", paste0(shQuote(produce, type="cmd"), collapse=", "), ")", sep="")
 Describe, in words, what these expressions will match:
 
     (.)\1\1    
-The above will match any three characters in a row, like 'ddd'.  The dot . matches any character, it is grouped with parentheses (.), and the \1 is a backreference to the group, and the second \1 is another backreference to the same group.    
+The above is a regular expression will match any three characters in a row, like 'ddd'.     
+To work in R, it needs to be modified to: "(.)\\1\\1"     
+
+The dot . matches any character, it is grouped with parentheses (.), and the \1 is a backreference to the group, and the second \1 is another backreference to the same group.   
     
     "(.)(.)\\2\\1"    
 The above will match any two characters, followed by the reverse of those two characters, like 'dppd'.  We start with 2 dots (any 2 characters), each grouped (with parens), then the backreference to the 2nd group, then and a backreference to the first group.  
 
     (..)\1    
-The above will match any two characters repeated: "dpdp".  A group of 2 characters, followed by a backreference.  
+The above is another regular expression that needs to change for R: "(..)\\1"
+
+Then will match any two characters repeated: "dpdp".  A group of 2 characters, followed by a backreference.  
     
     "(.).\\1.\\1"
 The above will match a string of 5 characters where the first, third and fifth character are the same: "dxdyd". A grouped character, then a dot (any char), then a backreference to the first group, another dot (any char) and another reference to the group.    
