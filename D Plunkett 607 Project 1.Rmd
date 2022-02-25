@@ -1,0 +1,125 @@
+---
+title: "D Plunkett 607 Project 1"
+author: "Diana Plunkett"
+date: "2/21/2022"
+output: html_document
+---
+## Overview
+
+
+
+
+### Load libraries and other set up
+
+```{r Libraries, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(magrittr)
+```
+
+### Load file
+
+```{r, Load-File, message=FALSE, warning=FALSE}
+Chess<- read_delim(
+            "https://raw.githubusercontent.com/dianaplunkett/607/main/tournamentinfo.txt",
+           delim = "|",
+           col_names = FALSE,
+           trim_ws = TRUE, 
+           skip = 4, 
+           show_col_types = FALSE)
+```
+
+
+### Initial file cleanup
+- remove the final empty column 11
+- get rid of every third row with all dashes in column X1 and NA in other columns
+
+```{r Init-clean, message=FALSE, warning=FALSE}
+Chess %<>% 
+    select( -X11) %>%
+    drop_na (X2)
+```
+
+### Now split into Odd and Even rows & bind_col
+The data now has "row pairs" with a single observation in 2 rows (eg Player 1 results are on row 1 and 2, Player 2 results are on row 3 and 4 etc).    
+
+Split the data into Odd and Even rows, then use bind_col to put each pair of rows back into a single row.  
+
+```{r odd-even, message=FALSE, warning=FALSE}
+row_odd <- seq_len(nrow(Chess)) %% 2
+Odd <- Chess[row_odd ==1,]
+Even <- Chess[row_odd ==0,]
+Chess2 <- bind_cols(Odd, Even)
+```
+
+### Filter to needed columns, rename, and separate and mutate    
+- remove the unneeded columns that come in from the second row of the "pairs"    
+- Now that we have just what we need, rename the remaining columns to be more meaningful    
+- separate the column with the playerID/pre/post ratings.  We only need the prerating here, so the separate focuses on isolating those 4 characters in "pre".  "id" and "post" end up with extraneous characters, but does not matter as we do not use them.    
+- in fact, we will remove those 2 unneeded columns, "id" and "post"    
+- separate the rd1-7 columns into cd1-cd7 and opp1-opp7 - separating the W/L/D/H/B codes from the opponent # 
+- then make 2 new new columns:  cds=a list of cd1-cd7 and opps= a list of opp1-opp7
+
+At the end of this step, we have just the data we need, and everything about a particular player is in a single row.  
+
+```{r final-clean, message=FALSE, warning=FALSE}
+Chess2 %<>%
+    select (-X3...13, -X4...14, -X5...15, -X6...16, -X7...17, -X8...18, -X9...19, -X10...20) 
+
+colnames(Chess2) <- c('player', 'name', 'total_pts', 'rd1', 'rd2', 'rd3', 'rd4', 'rd5', 'rd6','rd7', 'state', 'idprepost')
+
+Chess2 <- separate(Chess2, col=idprepost, into = c("id", "pre", "post"), sep=c(14,18))
+
+Chess2 %<>%
+    select ( -id, -post) %>% 
+    mutate(pre = as.integer(pre))
+
+extract_opp <- function(rdx) {
+    as.numeric(str_extract(rdx, "(\\d)+"))
+}
+
+Chess2$opp1 <-extract_opp(Chess2$rd1)
+Chess2$opp2 <-extract_opp(Chess2$rd2)
+Chess2$opp3 <-extract_opp(Chess2$rd3)
+Chess2$opp4 <-extract_opp(Chess2$rd4)
+Chess2$opp5 <-extract_opp(Chess2$rd5)
+Chess2$opp6 <-extract_opp(Chess2$rd6)
+Chess2$opp7 <-extract_opp(Chess2$rd7)
+
+Chess2 %<>% 
+    rowwise %>%
+    mutate( opps= list(c(opp1,opp2,opp3,opp4,opp5,opp6,opp7)))  %>%
+    select (name, state, total_pts, pre, opps)
+
+```
+
+### Get at Avg Rating of Opponents & write to csv
+For each row in the data (each player):    
+        - sum to total of the pre tournament rating of the opponents    
+        - count the number of games    
+        - calculate the Average Opponent Rating
+
+Set the final columns needed
+
+Write to csv
+
+```{r calc-avg-opp-rtg, message=FALSE, warning=FALSE}
+
+for (i in 1:nrow(Chess2) )  {
+    Chess2$oppTotal[i] <- sum(Chess2$pre[unlist(Chess2$opps[i])], na.rm=TRUE)
+    Chess2$numGames[i] <- sum(!is.na(unlist(Chess2$opps[i])))
+    Chess2$AvgOppRtg[i] <-as.integer(Chess2$oppTotal[i]/Chess2$numGames[i])
+}
+
+Output<-Chess2 %>% 
+    select( - oppTotal, -numGames, -opps)
+
+write.csv(Output, "dmp-chess-output.csv", quote = FALSE, row.names=FALSE)
+    
+```
+
+
+
+
+
+
