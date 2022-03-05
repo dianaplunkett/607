@@ -1,0 +1,92 @@
+---
+title: "D Plunkett 607 Week 5"
+author: "Diana Plunkett"
+date: "2/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction:
+
+It is not clear when this data is from.   Guidelines on who is eligible to be vaccinated, and what "fully vaccinated" means (original 1 or 2 shots?  + 1 booster?  + 2 boosters?) have changed over time.  The total population of ISR was just over 9.2M in 2020, but the sum of the population subsets given here is just under 7M, so a segment of the population is missing (those not eligible?  Under age 5?  Partially Vax?).    
+
+Given this, we can still tidy, and calculate efficacy and can see the Simpson's paradox in the result.  
+
+## Libraries and Data Load
+
+```{r message = FALSE}
+library(tidyverse)
+library(magrittr)
+
+ISR_vax<-read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/israeli_vaccination_data_analysis_start.csv")
+```
+
+## Reshape the existing data
+
+```{r}
+ISR_vax %<>% 
+    gather("Pop.Not.Vax", "Fully.Vax", key = "Vax", value="Population")%>%
+    mutate("Vax_Status" = ifelse(str_detect(Vax, "Fully"), "Fully", "Not")) %>%
+    mutate("PercentPop" = ifelse(str_detect(Vax_Status, "Fully"), X..Fully.vax, X..Pop.not.Vax)) %>%
+    mutate ("SevereCasesPer100K" = ifelse(str_detect(Vax_Status, "Fully"), Fully.Vax..Severe.Cases.per.100K, Not.Vax..Severe.Cases.per.100K)) %>%
+select (-starts_with("X"), -ends_with('.100K'), -Vax)
+
+ISR_vax$Population <-as.numeric(gsub(",","",ISR_vax$Population))
+
+
+```
+
+## Calc Efficacy (reshaping again)
+
+```{r}
+ISR_vax %<>%
+    mutate("PercentSevereCasesPer100K" = (SevereCasesPer100K/Population)*100000) %>%
+    pivot_wider(
+        names_from = Vax_Status,
+        values_from = c(Population, PercentPop, SevereCasesPer100K, PercentSevereCasesPer100K)
+    ) %>%
+    mutate ("Efficacy" = 1 - (PercentSevereCasesPer100K_Fully/PercentSevereCasesPer100K_Not))
+
+(result <- select (ISR_vax, Age, Efficacy))
+```
+
+## Did the above prior to class.  
+After class, realized that we wanted to look at the total population and the population by age.  
+Also watching the suggested video on Simpson's Paradox and reading this article (which must be from slightly later as the case numbers are higher):    
+https://www.covid-datascience.com/post/israeli-data-how-can-efficacy-vs-severe-disease-be-strong-when-60-of-hospitalized-are-vaccinated    
+Therefore...
+
+## Calc Efficacy (total pop of all ages)
+```{r}
+ISR_vax_ALL <- ISR_vax %>%
+    summarize (Pop_Not = sum(Population_Not), 
+               Pop_Full= sum(Population_Fully),
+               Case_Not = sum(SevereCasesPer100K_Not),
+               Case_Full = sum(SevereCasesPer100K_Fully)) %>%
+    mutate("PercentCases_Not" = (Case_Not/Pop_Not)*100000) %>%
+    mutate("PercentCases_Full" = (Case_Full/Pop_Full)*100000) %>%
+    mutate ("Total_Efficacy" = 1 - (PercentCases_Full/PercentCases_Not))
+
+ISR_vax_ALL$Total_Efficacy    
+```
+
+## Conclusion: 
+First step was to "narrow the data" so a there were 4 rows (observations): each  combination of Age(< 50 | >50) and Vax_Status ("Not" | "Fully" ).  Then one could calculate the % of Severe Cases per 100K in each of those populations (by age).    
+
+Next step was to then "widen" the data so there were 2 rows (one for each age group) containing the % if Severe Cases per 100K for both Fully and Not Vax in the same row.  This allowed the calculation of the efficacy by age.
+
+After that (and after realizing the point was to calculate for the total population and see how that compared to the population by age) the final step was to sum the population and cases, and calculate the efficacy for the total population.  
+     
+Given the data we started with (and the caveats mentioned in the introduction), the efficacy (by age) of the vaccine vs severe disease in Israel was (at whatever point this data was taken):     
+        For Age<50      =   .92    
+        For Age>50      =   .85
+
+Which contrasts with the efficacy for the total population:
+        .67
+        
+An example of Simpson's paradox: the marginal association of the severe cases and vaccination is 67%, which differs substantially when we look at the association of severe cases and vaccination after controlling by age, when we get 92% and 85%.  
+        
+
