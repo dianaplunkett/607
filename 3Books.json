@@ -1,0 +1,23 @@
+{"3 Books" :[
+{
+ "BookID" : 1,
+ "Author": ["Seth Godin"],
+ "Title" : "Linchpin",
+ "Year Published": 2010,
+ "ISBN"  : "978-1-59184-316-0"
+ },
+ {
+ "BookID" : 2,
+ "Author": ["Chip Heath", "Dan Heath"],
+ "Title" : "Made to Stick",
+ "Year Published": 2007,
+ "ISBN"  : "978-1-4000-6428-1"
+ },
+ {
+ "BookID" : 3,
+ "Author": ["Daniel Kahneman"],
+ "Title" : "Thinking, Fast and Slow",
+ "Year Published": 2011,
+ "ISBN"  : "978-0-374-53335-7"
+ }]
+ }
