@@ -1,0 +1,80 @@
+---
+title: "D Plunkett 607 Week 7"
+author: "Diana Plunkett"
+date: "3/14/2022"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction:
+Here we will bring in 3 files:    
+    3Books.html    
+    3Books.xml    
+    3Books.json    
+and compare the results.
+
+```{r}
+library(rvest)
+library(xml2)
+library(rjson)
+library(tidyr)
+```
+
+
+
+### First, html
+
+```{r}
+html_doc <- html_table(read_html("https://raw.githubusercontent.com/dianaplunkett/607/main/3Books.html"))
+
+html_df <- as.data.frame( unlist(html_doc, recursive=FALSE))
+
+html_df    
+```
+
+
+
+### Next, xml
+
+```{r}
+xml_doc <- as_list(read_xml("https://raw.githubusercontent.com/dianaplunkett/607/main/3Books.xml"))
+
+xml_df <- tibble::as_tibble(xml_doc) %>%
+    unnest_wider(books) %>% 
+    unnest_longer(Author) %>%
+    unnest_longer(Title) %>%
+    unnest_longer(Year_Published) %>%
+    unnest_longer(ISBN) %>%
+    unnest_longer(Author...1) %>%
+    unnest_longer(Author...2)
+
+print(xml_df)
+
+
+```
+
+
+### Finally, json
+```{r}
+json_doc <- fromJSON(file="https://raw.githubusercontent.com/dianaplunkett/607/main/3Books.json")
+
+json_doc_df <- tibble::as_tibble(json_doc) %>%
+    unnest_wider(`3 Books`)
+
+json_doc_df
+```
+
+## Conclusion:    
+
+Each of the formats result in different structures, and then we used some functions to clean them a bit.    
+
+Using unlist and as.data.frame, the html ended 3 rows (one for each book) and 4 columns (the variables about the books).  There might have been a way in html to be more sophisticated in capturing the two authors, but here I kept it simple and just made it one element with two comma separated values.  
+
+For the xml I used unnest_wider to bring everything into columns, and then unnest_longer for each column to end up with a nice data frame.  One caveat: in the xml, the book with two authors had two instances of author within it.  This resulted in an "Author" column with the single authors, and "Author...1" and "Author...2" columns for the book with multiple authors.  
+
+The json came also ended up in a nice data frame, with 3 rows (one for each book) and 5 columns (the variables about the books - here I used a "BookID" not used in the others). In this case, the book with two authors came in as a list of the two in a single element.  The json structure allowed for this.    
+
+
+
