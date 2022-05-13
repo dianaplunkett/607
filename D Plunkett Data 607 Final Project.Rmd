@@ -1,0 +1,587 @@
+---
+title: "Data 607 Final Project"
+author: "Diana Plunkett"
+date: "4/24/2022"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Libraries
+```{r, results=FALSE, message=FALSE}
+library(tidyverse)
+library(scales)
+library(GGally)
+library(magrittr)
+library(psych)
+```
+
+## Introduction    
+About PLDS: This is an annual census survey of all public libraries in the US. The most recent data available is 2019.  We will pull in 2015-2019.
+
+This project will focus on Circulation, and what might impact it.  
+
+Certain additional variables will also be used: 
+
+* Locale (Simplified to City, Suburb, Town and Rural. The original data divides this further into S/M/L for City
+and Suburb; Fringe/Distant/Remote for Town and Rural.)
+* Population Served (used to calculate per capita for metrics)
+* Collection Spending 
+
+We also calculate some values we will need:    
+
+* totalEXPColl = total collection expenditures    
+* perCAPITA = the collection expenditures / population served    
+* perCAPcirc = circulation / population served    
+
+And we will explore some other variables that might be relevant.
+
+And since each year starts as a separate file, we add year to each before combining.
+
+We also filter out those library systems that:    
+
+* do not meet all the criteria in the FSCS Public Library Definition    
+* those with a -3 for Total Circulation (TOTCIR) indicating they were closed during the survey period or a -1 indicating the data was missing.    
+* Have neither a Central Library nor Branches (they have only bookmobiles)    
+
+### Goals:    
+
+* Put 5 years of data together (2015 - 2019)    
+* Explore what correlates with Circulation    
+* Statistical Analysis    
+
+## Data Transformation
+#### 2019
+```{r}
+PLDS2019<-
+read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/PLS_FY19_AE_pud19i.csv")
+
+PLDS2019 %<>%
+  filter(C_FSCS == "Y")  %>%
+select("STABR", "FSCSKEY", "LIBNAME",
+"C_RELATN", "C_LEGBAS", "C_ADMIN",
+"GEOCODE", "POPU_UND", "CENTLIB", "BRANLIB",
+"BKMOB", "LIBRARIA", "OTHPAID", "LOCGVT", "STGVT",
+"FEDGVT", "OTHINCM", "PRMATEXP", "ELMATEXP",
+"OTHMATEX", "BKVOL", "EBOOK", "AUDIO_PH",
+"AUDIO_DL", "VIDEO_PH", "VIDEO_DL", "HRS_OPEN",
+"VISITS", "TOTCIR", "ELMATCIR",  "TOTPRO", "KIDPRO", "YAPRO", "TOTATTEN", "KIDATTEN", "YAATTEN", "OBEREG", "RSTATUS", "LOCALE_ADD")
+
+PLDS2019 <- PLDS2019 %>% rename(LOCALE=LOCALE_ADD)
+
+PLDS2019$YEAR <-"2019"
+```
+
+#### 2018
+```{r}
+PLDS2018<-
+read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/pls_fy18_ae_pud18i.csv")
+
+PLDS2018 %<>%
+  filter(C_FSCS == "Y")  %>%
+select("STABR", "FSCSKEY", "LIBNAME",
+"C_RELATN", "C_LEGBAS", "C_ADMIN",
+"GEOCODE", "POPU_UND", "CENTLIB", "BRANLIB",
+"BKMOB", "LIBRARIA", "OTHPAID", "LOCGVT", "STGVT",
+"FEDGVT", "OTHINCM", "PRMATEXP", "ELMATEXP",
+"OTHMATEX", "BKVOL", "EBOOK", "AUDIO_PH",
+"AUDIO_DL", "VIDEO_PH", "VIDEO_DL", "HRS_OPEN",
+"VISITS", "TOTCIR", "ELMATCIR",  "TOTPRO", "KIDPRO", "YAPRO", "TOTATTEN", "KIDATTEN", "YAATTEN", "OBEREG", "RSTATUS", "LOCALE_ADD")
+
+PLDS2018 <- PLDS2018 %>% rename(LOCALE=LOCALE_ADD)
+
+PLDS2018$YEAR <-"2018"
+
+```
+
+#### 2017
+```{r}
+PLDS2017<-
+read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/PLS_FY17_AE_pud17i.csv")
+
+PLDS2017 %<>%
+  filter(C_FSCS == "Y")  %>%
+select("STABR", "FSCSKEY", "LIBNAME",
+"C_RELATN", "C_LEGBAS", "C_ADMIN",
+"GEOCODE", "POPU_UND", "CENTLIB", "BRANLIB",
+"BKMOB", "LIBRARIA", "OTHPAID", "LOCGVT", "STGVT",
+"FEDGVT", "OTHINCM", "PRMATEXP", "ELMATEXP",
+"OTHMATEX", "BKVOL", "EBOOK", "AUDIO_PH",
+"AUDIO_DL", "VIDEO_PH", "VIDEO_DL", "HRS_OPEN",
+"VISITS", "TOTCIR", "ELMATCIR",  "TOTPRO", "KIDPRO", "YAPRO", "TOTATTEN", "KIDATTEN", "YAATTEN", "OBEREG", "RSTATUS", "LOCALE_ADD")
+
+PLDS2017 <- PLDS2017 %>% rename(LOCALE=LOCALE_ADD)
+
+PLDS2017$YEAR <-"2017"
+
+```
+
+#### 2016
+```{r}
+PLDS2016<-
+read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/PLS_FY2016_AE_pupld16a_updated.csv")
+
+PLDS2016 %<>%
+  filter(C_FSCS == "Y")  %>%
+select("STABR", "FSCSKEY", "LIBNAME",
+"C_RELATN", "C_LEGBAS", "C_ADMIN",
+"GEOCODE", "POPU_UND", "CENTLIB", "BRANLIB",
+"BKMOB", "LIBRARIA", "OTHPAID", "LOCGVT", "STGVT",
+"FEDGVT", "OTHINCM", "PRMATEXP", "ELMATEXP",
+"OTHMATEX", "BKVOL", "EBOOK", "AUDIO_PH",
+"AUDIO_DL", "VIDEO_PH", "VIDEO_DL", "HRS_OPEN",
+"VISITS", "TOTCIR", "ELMATCIR",  "TOTPRO", "KIDPRO", "YAPRO", "TOTATTEN", "KIDATTEN", "YAATTEN", "OBEREG", "RSTATUS", "LOCALE")
+
+
+PLDS2016$YEAR <-"2016"
+```
+
+#### 2015
+```{r}
+PLDS2015<-
+read.csv("https://raw.githubusercontent.com/dianaplunkett/607/main/PLS_FY2015_AE_pupld15a.csv")
+
+PLDS2015 %<>%
+  filter(C_FSCS == "Y")  %>%
+select("STABR", "FSCSKEY", "LIBNAME",
+"C_RELATN", "C_LEGBAS", "C_ADMIN",
+"GEOCODE", "POPU_UND", "CENTLIB", "BRANLIB",
+"BKMOB", "LIBRARIA", "OTHPAID", "LOCGVT", "STGVT",
+"FEDGVT", "OTHINCM", "PRMATEXP", "ELMATEXP",
+"OTHMATEX", "BKVOL", "EBOOK", "AUDIO_PH",
+"AUDIO_DL", "VIDEO_PH", "VIDEO_DL", "HRS_OPEN",
+"VISITS", "TOTCIR", "ELMATCIR",  "TOTPRO", "KIDPRO", "YAPRO", "TOTATTEN", "KIDATTEN", "YAATTEN", "OBEREG", "RSTATUS", "LOCALE")
+
+
+PLDS2015$YEAR <-"2015"
+```
+
+### Putting the years together
+Very excited to find do.call!
+rbind only accepts 2 dfs.  using do.call, we can pass all 5.  do.call allows call to any existing R function.  
+```{r}
+PLDS.ALL <- do.call("rbind", 
+                     list(PLDS2015, PLDS2016, 
+                          PLDS2017, PLDS2018, PLDS2019))
+```
+### And doing some cleanup
+```{r}
+locNUM <- c(11,12,13,
+21,22,23,
+31,32,33,
+41,42,43)
+locNAME <- c("City", "City", "City",
+"Suburb", "Suburb", "Suburb",
+"Town", "Town", "Town",
+"Rural", "Rural", "Rural")
+PLDS.ALL %<>%
+# -3 means library was closed, -1 means value is missing    
+filter (TOTCIR > 0) %>% 
+filter (VISITS >0) %>%
+filter (TOTPRO >0) %>%
+filter (TOTATTEN >0) %>%
+filter (ELMATCIR >0) %>%
+filter (BKVOL >0) %>%
+filter (EBOOK >0) %>%
+#Keep only those with physical spaces not just bookmobiles 
+filter (CENTLIB+BRANLIB>0) %>%
+mutate(totalEXPColl = PRMATEXP+ELMATEXP+OTHMATEX) %>%
+mutate(perCAPITA = totalEXPColl / POPU_UND) %>%
+mutate(perCAPcirc = TOTCIR / POPU_UND) %>%
+mutate(perCAPe = ELMATCIR/POPU_UND)
+
+PLDS.ALL$LOCALE <-factor(PLDS.ALL$LOCALE,
+levels=locNUM,
+labels=locNAME)
+```
+
+### How many library systems by year?
+```{r}
+PLDS.ALL %>%
+  group_by(YEAR) %>%
+  summarize(dist_libs = n_distinct(FSCSKEY))
+```
+Since I want to compare trends over time, I want to limit what I am looking at to those library systems that have a row in all 5 years.
+
+```{r}
+all5yrs <- 
+  PLDS.ALL %>% 
+  group_by (FSCSKEY) %>% 
+  summarise(years_avail=n())  %>%
+ filter (years_avail==5) 
+
+PLDS.ALL5 <- inner_join(PLDS.ALL, all5yrs)
+
+PLDS.ALL5$YEAR <-as.numeric(PLDS.ALL5$YEAR)
+```
+```{r}
+PLDS.ALL5 %>%
+  group_by(YEAR) %>%
+  summarize(dist_libs = n_distinct(FSCSKEY))
+```
+Which leaves us with 6768 library systems.    
+
+## Exploring the Data      
+
+```{r}
+PLDS.ALL5 %>%
+filter(FSCSKEY=='NY0004') %>%
+select (LIBNAME, LOCALE, TOTCIR, perCAPcirc,YEAR) %>%
+head 
+```
+### A bit more tidying
+There were 4 rows with LOCALE=NA for YEAR =2016, and those systems were "Rural" in the years before and after, so corrected it to be "Rural".  
+
+```{r}
+PLDS.ALL5 %>% filter(is.na(LOCALE))
+```
+
+```{r}
+PLDS.ALL5 %>% filter(FSCSKEY=="AK0081") %>%
+    select(FSCSKEY, LOCALE, YEAR)
+
+```
+
+```{r}
+PLDS.ALL5$LOCALE <- PLDS.ALL5$LOCALE %>% 
+    replace_na('Rural')
+```
+
+### Box Plot - Per Capita Circ by Locale
+```{r}
+PLDS.ALL5 %>%
+  ggplot( aes(x=LOCALE, y=perCAPcirc, color=LOCALE)) +
+    geom_boxplot() +
+    theme_minimal() +
+    scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    xlab("") + 
+    ylab("") +
+    ggtitle("Per Cap Circ by Locale") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(size = 6))
+```
+      
+You can see the "box" is pretty consistent - with some variation in the upper whiskers.  
+
+#### Total Circ (not per capita) 
+Just for comparison    
+
+```{r}
+PLDS.ALL5 %>%
+  ggplot( aes(x=LOCALE, y=TOTCIR, color=LOCALE)) +
+    geom_boxplot() +
+    theme_minimal() +
+    scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    xlab("") + 
+    ylab("") +
+    ggtitle("TOTAL Circ by Locale") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(size = 6))+
+  scale_y_continuous(labels = label_number(suffix = " M", scale = 1e-6))
+```
+    
+### A Jitter Plot is a nice visual here
+```{r}
+PLDS.ALL5 %>%
+  ggplot( aes(x=LOCALE, y=perCAPcirc, color=LOCALE)) +
+    geom_jitter() +
+    theme_minimal() +
+    scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    facet_wrap(~YEAR) + 
+    coord_flip() +
+        xlab("") + 
+    ylab("") +
+    ggtitle("Per Cap Circ by Locale & Year") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(size = 6))
+```
+
+     
+#### How many library systems had perCAPcirc >50?
+```{r}
+PLDS.ALL5 %>%
+    filter(perCAPcirc>50) %>% group_by (YEAR) %>% summarise(n=n())
+```
+#### Jitter Plot for perCAPCirc <50 
+Did not end up using this in the presentation, but was curious.
+```{r}
+PLDS.ALL5 %>%
+    filter(perCAPcirc<50) %>%
+  ggplot( aes(x=LOCALE, y=perCAPcirc, color=LOCALE)) +
+    geom_jitter() +
+    theme_minimal() +
+    scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    facet_wrap(~YEAR) + 
+    coord_flip() +
+        xlab("") + 
+    ylab("") +
+    ggtitle("Per Cap Circ (<50) by Locale & Year") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(size = 6))
+```
+    
+## Analysis
+
+### Overall Trend in Per Capita Circ
+```{r}
+PLDS.ALL5 %>%
+    group_by(LOCALE, YEAR) %>%
+    mutate(avgPerCapCirc = mean(perCAPcirc)) %>%
+  ggplot( aes(x=YEAR, y=avgPerCapCirc, color=LOCALE)) +
+    geom_line(size=1.5) +
+    theme_minimal() +
+   scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    xlab("") + 
+    ggtitle("Average Per Capita Circ Trend by Locale")
+```
+       
+### A Challange    
+Below is what it looked like before I figured out how to make a line chart:
+
+```{r}
+PLDS.ALL5 %>%
+  #  mutate(YEAR = as.Date(YEAR, format = "%Y"))%>%
+ #   group_by(LOCALE, YEAR) %>%
+    mutate(avgPerCapCirc = perCAPcirc) %>% #took out mean here
+  ggplot( aes(x=YEAR, y=avgPerCapCirc, color=LOCALE)) +
+    geom_line() +
+    theme_minimal() +
+   scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" )) +
+    xlab("") + 
+    ggtitle("Average Per Capita Circ Trend by Locale")
+```
+
+### Which sytems went up from 2015 - 2019?
+Let's pivot so we can compare 2015 to 2019 to see if there is an increase or decrease in perCAPcirc
+
+```{r}
+yrs.circ <- PLDS.ALL5 %>% 
+#Keeping only the columns we need here
+  select (FSCSKEY, YEAR, perCAPcirc) %>%
+  pivot_wider(names_from = YEAR, names_prefix = "Y", values_from = perCAPcirc) %>%
+  mutate (perCAPcirc.Up = Y2019 > Y2015) %>%
+#once we calc the above, we do not want the year columns for the join 
+  select (FSCSKEY, perCAPcirc.Up)
+
+table(yrs.circ$perCAPcirc.Up)
+
+```
+
+```{r}
+#putting the fields we calculated back together with main data 
+PLDS.ALL5 <- inner_join(PLDS.ALL5, yrs.circ)
+```
+
+### Plotting by CircUP
+No suprise here, but just checking...
+
+```{r}
+PLDS.ALL5 %>%
+    group_by(perCAPcirc.Up, YEAR) %>%
+    mutate(avgPerCapCirc = mean(perCAPcirc)) %>%
+  ggplot( aes(x=YEAR, y=avgPerCapCirc, color=perCAPcirc.Up)) +
+    geom_line() +
+    theme_minimal() +
+   scale_color_manual(values=c('#e69f4e', '#299dcc') )+ 
+    xlab("") + 
+    ggtitle("Average Per Capita Circ Trend by CircUp")
+```
+
+### Exploring different variables
+As they might relate to circ
+
+#### VISITS
+Thought this might be a stronger relationship that it was.
+```{r}
+ggplot (PLDS.ALL5, aes(x=VISITS,
+y=perCAPcirc,
+color=perCAPcirc.Up)) +
+geom_point(alpha=.25) +
+theme_minimal() +
+scale_color_manual(values=c('#e69f4e', '#299dcc')) +
+	scale_x_continuous(labels = label_number(suffix = " M", scale = 1e-6))
+```
+
+#### LOCALE
+```{r}
+round(prop.table(table(PLDS.ALL5$LOCALE,PLDS.ALL5$perCAPcirc.Up),1), 2)
+```
+```{r}
+mosaicplot(table(PLDS.ALL5$LOCALE,PLDS.ALL5$perCAPcirc.Up),
+  color = c('#e69f4e', '#299dcc'),
+  xlab = "Locale", # label for x-axis
+  ylab = "Per Capita Circ Up?" # label for y-axis
+)
+```
+       
+Very consistent proportion of systems where perCAPcirc went up (blue) and down (orange) across different locales.  
+
+### ggpairs
+I looked at a number of different variables here, but these were the ones I landed on as the most interesting.  
+```{r}
+#make a subset of columns to look at in ggpairs
+small.PLDS.ALL5 <- PLDS.ALL5 %>%
+  select (HRS_OPEN, VISITS, LIBRARIA, perCAPITA, perCAPcirc, perCAPcirc.Up )
+
+ggpairs(small.PLDS.ALL5,columns=1:5, aes(color = perCAPcirc.Up)) + 
+scale_color_manual(values=c('#e69f4e', '#299dcc'))
+```
+
+   
+### Diving into perCAPITA and perCAPcirc
+
+```{r}
+skew(PLDS.ALL5$perCAPITA)
+```
+```{r}
+skew(PLDS.ALL5$perCAPcirc)
+```
+
+Because the data is skewed, will take the logs of both to do linear regression model:
+```{r}
+PLDS.ALL5 %<>%
+mutate(log.perCAPITA = log(perCAPITA+1)) %>%
+mutate(log.perCAPcirc = log(perCAPcirc+1))
+```
+
+And now they are less skewed:
+
+```{r}
+skew(PLDS.ALL5$log.perCAPITA)
+```
+
+```{r}
+PLDS.ALL5 %>%
+ggplot(aes(log.perCAPITA)) +
+geom_histogram(aes(y = ..density..), color= "#929292", fill="#ACBFE6", binwidth=.1) +
+stat_function(fun = dnorm,
+args = list(mean = mean(PLDS.ALL5$log.perCAPITA),
+sd = sd(PLDS.ALL5$log.perCAPITA)),
+col = "red",
+size = .5,
+linetype = "dashed") + theme_minimal()+
+ggtitle("Skew now = 0.2301982")
+
+```
+
+```{r}
+skew(PLDS.ALL5$log.perCAPcirc)
+```
+```{r}
+PLDS.ALL5 %>%
+ggplot(aes(log.perCAPcirc)) +
+geom_histogram(aes(y = ..density..), color= "#929292", fill="#ACCC89", binwidth=.1) +
+stat_function(fun = dnorm,
+args = list(mean = mean(PLDS.ALL5$log.perCAPcirc),
+sd = sd(PLDS.ALL5$log.perCAPcirc)),
+col = "red",
+size = .5,
+linetype = "dashed")+ theme_minimal() +
+ggtitle("Skew now = 0.02140532")
+10
+```
+
+### Linear Model
+
+```{r}
+m1 <- lm(log.perCAPcirc ~ log.perCAPITA + LOCALE, data = PLDS.ALL5)
+
+summary(m1)
+```
+
+### Plotting log.perCAPcirc ~ log.perCAPITA + LOCALE
+```{r}
+ggplot(data = PLDS.ALL5,
+aes(x = log.perCAPITA, y = log.perCAPcirc, color=LOCALE)) +
+geom_point(color="grey") +
+stat_smooth(method = "lm", se = FALSE)+
+theme_minimal()+
+   scale_color_manual(values=c("#A6D683", "#2CA388", "#106B6B", "#577C97" ))
+```
+    
+#### Plotting log.perCAPcirc ~ log.perCAPITA + perCAPcirc.Up
+```{r}
+ggplot(data = PLDS.ALL5,
+aes(x = log.perCAPITA, y = log.perCAPcirc, color=perCAPcirc.Up)) +
+geom_point(color="grey") +
+stat_smooth(method = "lm", se = FALSE)+
+theme_minimal()+
+   scale_color_manual(values=c('#e69f4e', '#299dcc'))
+```
+    
+(Not as interesting)
+
+#### Model Diagnostics
+Running this, but will not present (as focus of presentation more on data + story)
+
+##### Linearity
+plot of the residuals vs. fitted (predicted) values
+```{r}
+ggplot(data = m1, aes(x = .fitted, y = .resid)) +
+geom_point() +
+geom_hline(yintercept = 0, linetype = "dashed") +
+xlab("Fitted values") +
+ylab("Residuals")+
+theme_minimal()
+```
+    
+
+Some issues to be aware of here - the plot is not as random on the lower left, and the right side is much less dense than the left.  
+
+
+##### Nearly normal residuals
+To check this condition, we can look at a histogram
+```{r}
+ggplot(data = m1, aes(x = .resid)) +
+geom_histogram(binwidth = .25) +
+xlab("Residuals")+
+theme_minimal()
+```
+
+or a normal probability plot of the residuals:
+
+```{r}
+ggplot(data = m1, aes(sample = .resid)) +
+stat_qq()+
+theme_minimal()
+```
+
+## Conclusion
+Not going to go through all the math in the presentation but will explain more here.  
+
+This (https://stats.oarc.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/) is the link to the website that guided me through the process of interpreting the results when I had used log(x+1) and log(y+1).  
+
+Basically using the coefficients in the linear equation, then accounting for the fact that we used the log on both the x and y axis.  
+
+To write the linear model for this, we start with the familiar formula, but remember that we used log():       
+log(perCAPcirc) = B0 + B1 * log(perCAPITA)     
+
+Want to understand how to interpret this given we have taken the log on both sides.    
+
+Focusing first on the interpretation of B1, we can take 2 values of perCAPITA - call them PC1 and PC2, and we can say the log of perCAPCirc(PC2) minus the log of perCAPcirc(PC1) = B1 times [log(PC2)-log(PC1)].         
+Reducing that, we we end up with the ratio of perCAPcirc(PC2) over perCAPcirc(PC1) = ratio of PC2 over PC1 raised to B1.
+
+Or, more simply, after plugging in the numbers: 
+for a 10% increase in perCAPITA the expected increase in perCAPcirc is 7.3%. 
+
+Then, thinking about B0, we know that it is equal to log(perCAPcirc) when log(perCAPITA)=0
+We take the exponential of B0, plug in the actual value, and we get 2.29
+
+And we find:    
+When per capita spending on a City library system’s collection is 0, per capita circ is predicted to be 2.29.  
+For every additional 10% increase in per capita spending on the collection, we predict a 7.3% increase in circ.
+
+This is for those libraries that had a CITY locale.  As we move through suburbs, towns and to rural libraries, the predicted circ is slightly lower.
+
+There are some caveats to what we have done:     
+
+* A library’s collection is not just what is purchased this year.
+* 2019 data is pre-pandemic.
+ 
+Also note that I left some, but not most, of the exploration that did not amount to anything here.  
+
